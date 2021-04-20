@@ -192,7 +192,7 @@ class FileVersionTable(FilePropertiesTable):
         raise NotImplementedError()
 
     def get_default_target_indices(self):
-        return get_all_test_files(base_dataset_dir=self.base_dir)
+        return get_all_test_files(base_dataset_dir=self.original_base_dir)
 
     def original_to_versioned_path(self, original_path):
         """Get the path of the versioned file corresponding to original_path.
@@ -219,6 +219,7 @@ class FileVersionTable(FilePropertiesTable):
         :param target_columns: if not None, the list of columns that are considered for computation
         """
         target_indices = target_indices if target_indices is not None else self.get_default_target_indices()
+    
         assert all(index == get_canonical_path(index) for index in target_indices)
         original_df = self.original_properties_table.get_df(
             target_indices=target_indices,
