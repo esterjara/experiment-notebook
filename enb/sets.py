@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Locate, analyze, expose and catalogue dataset entries.
-
 The FilePropertiesTable class contains the minimal information about the file
 as well as basic statistical measurements.
-
 Subclasses of this table can be created adding extra columns.
-
 The experiment.CompressionExperiment class takes an instance of FilePropertiesTable
 to know what files the experiment should be run on.
 """
@@ -36,7 +33,6 @@ hash_algorithm = "sha256"
 
 def get_all_test_files(ext="raw", base_dataset_dir=None):
     """Get a list of all set files contained in the data dir.
-
     :param ext: if not None, only files with that extension (without dot)
       are returned by this method.
     :param base_dataset_dir: if not None, the dir where test files are searched
@@ -137,10 +133,8 @@ class FilePropertiesTable(atable.ATable):
 class FileVersionTable(FilePropertiesTable):
     """Table to gather FilePropertiesTable information from a
     version of the original files.
-
     IMPORTANT: FileVersionTable is intended to be defined as parent class
     _before_ the table class to be versioned, e.g.:
-
     ::
           class MyVersion(FileVersionTable, FilePropertiesTable):
             pass
@@ -155,23 +149,29 @@ class FileVersionTable(FilePropertiesTable):
           (versioned directories preserve names and structure within
           the base dir)
         :param version_name: arbitrary name of this file version
-
         :param original_base_dir: path to the original directory
           (it must contain all indices requested later with self.get_df()).
           If None, options.base_datset_dir is used
-
         :param original_properties_table: instance of the file properties table (or subclass)
           to be used. If None, a FilePropertiesTable is instanced automatically.
-
         :param csv_support_path: path to the file where results (of the versioned data) are to be
           long-term stored. If None, one is assigned by default based on options.persistence_dir.
         """
 
         self.original_base_dir = os.path.abspath(os.path.realpath(original_base_dir)) \
             if original_base_dir is not None else options.base_dataset_dir
+
+        for base_class in self.__class__.__bases__:
+            if base_class is not FileVersionTable and issubclass(base_class, FilePropertiesTable):
+                default_class = base_class
+                break
+        else:
+            default_class = FilePropertiesTable
+
         self.original_properties_table = original_properties_table \
             if original_properties_table is not None \
-            else FilePropertiesTable(base_dir=self.original_base_dir)
+            else default_class(base_dir=self.original_base_dir)
+
         self.version_base_dir = os.path.abspath(os.path.realpath(version_base_dir))
         self.version_name = version_name
         self.current_run_version_times = {}
@@ -181,12 +181,10 @@ class FileVersionTable(FilePropertiesTable):
 
     def version(self, input_path, output_path, row):
         """Create a version of input_path and write it into output_path.
-
         :param input_path: path to the file to be versioned
         :param output_path: path where the version should be saved
         :param row: metainformation available using super().get_df
           for input_path
-
         :return: if not None, the time in seconds it took to perform the (forward) versioning.
         """
         raise NotImplementedError()
@@ -210,7 +208,6 @@ class FileVersionTable(FilePropertiesTable):
         If fill is True, missing values will be computed.
         If fill and overwrite are True, all values will be computed, regardless of
         whether they are previously present in the table.
-
         :param overwrite: if True, version files are written even if they exist
         :param target_indices: list of indices that are to be contained in the table,
             or None to use the list of files returned by sets.get_all_test_files()
@@ -219,7 +216,7 @@ class FileVersionTable(FilePropertiesTable):
         :param target_columns: if not None, the list of columns that are considered for computation
         """
         target_indices = target_indices if target_indices is not None else self.get_default_target_indices()
-    
+
         assert all(index == get_canonical_path(index) for index in target_indices)
         original_df = self.original_properties_table.get_df(
             target_indices=target_indices,
@@ -335,12 +332,12 @@ def ray_version_one_path(version_fun, input_path, output_path, overwrite, origin
 
 def version_one_path_local(version_fun, input_path, output_path, overwrite, original_info_df, options):
     """Version input_path into output_path using version_fun.
-    
+
     :return: a tuple ``(output_path, l)``, where output_path is the selected otuput path and
       l is a list with the obtained versioning time. The list l shall contain options.repetitions elements.
       NOTE: If the subclass version method returns a value, that value is taken
       as the time measurement.
-    
+
     :param version_fun: function with signature like FileVersionTable.version
     :param input_path: path of the file to be versioned
     :param output_path: path where the versioned file is to be stored
